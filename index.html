@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Scanner - Match Your CV to Jobs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 0.8s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-blue-600">🎯 AI Resume Scanner</h1>
+                <span class="text-sm text-green-600 font-semibold">100% FREE ✨</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="max-w-6xl mx-auto px-4 py-12">
+        <div class="text-center mb-12">
+            <h2 class="text-4xl font-bold text-gray-900 mb-4">
+                Match Your Resume to Any Job
+            </h2>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+                Upload your CV and paste a job description. Our FREE AI analyzes the match, 
+                identifies missing keywords, and provides actionable tips to improve your application.
+            </p>
+            <p class="text-sm text-green-600 font-semibold mt-2">✨ Powered by Open Source AI - No API Costs!</p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <!-- Job Description -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Job Description *
+                    </label>
+                    <textarea 
+                        id="jobDescription" 
+                        class="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        placeholder="Paste the job description here...
+
+Example: We're looking for a Senior Software Engineer with 5+ years of experience in Python, FastAPI, React..."
+                    ></textarea>
+                </div>
+
+                <!-- File Upload -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Upload Your Resume (PDF) *
+                    </label>
+                    <div 
+                        id="dropZone" 
+                        class="h-64 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer flex flex-col items-center justify-center bg-gray-50"
+                    >
+                        <svg class="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        <p class="text-sm text-gray-600 mb-1">
+                            <span class="font-semibold text-blue-600">Click to upload</span> or drag and drop
+                        </p>
+                        <p class="text-xs text-gray-500">PDF files only (Max 10MB)</p>
+                        <input 
+                            type="file" 
+                            id="fileInput" 
+                            accept=".pdf" 
+                            class="hidden"
+                        >
+                    </div>
+                    <div id="fileName" class="mt-2 text-sm text-gray-600 hidden">
+                        <span class="font-semibold">Selected:</span> <span id="fileNameText"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analyze Button -->
+            <div class="text-center">
+                <button 
+                    id="analyzeBtn" 
+                    class="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                    Analyze Resume
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden">
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6">Analysis Results</h3>
+                
+                <!-- Match Score -->
+                <div class="text-center mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                    <p class="text-sm font-semibold text-gray-600 mb-2">MATCH SCORE</p>
+                    <p id="matchScore" class="text-6xl font-bold text-blue-600">--</p>
+                    <p class="text-sm text-gray-500 mt-2">out of 100</p>
+                </div>
+
+                <!-- Summary -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-3">Summary</h4>
+                    <p id="summary" class="text-gray-700 leading-relaxed"></p>
+                </div>
+
+                <!-- Missing Keywords -->
+                <div class="mb-6">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-3">Missing Keywords</h4>
+                    <div id="missingKeywords" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Tips -->
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-800 mb-3">💡 Improvement Tips</h4>
+                    <ul id="tipsList" class="space-y-2"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-8 text-center shadow-2xl">
+            <div class="spinner mx-auto mb-4"></div>
+            <p class="text-lg font-semibold text-gray-800">Analyzing your resume...</p>
+            <p class="text-sm text-gray-500 mt-2">This may take 20-30 seconds on first use</p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const fileNameText = document.getElementById('fileNameText');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const jobDescription = document.getElementById('jobDescription');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const resultsSection = document.getElementById('resultsSection');
+
+        let selectedFile = null;
+
+        // File upload handlers
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-400', 'bg-blue-50');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            if (file.type !== 'application/pdf') {
+                alert('Please select a PDF file');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File size must be less than 10MB');
+                return;
+            }
+
+            selectedFile = file;
+            fileNameText.textContent = file.name;
+            fileName.classList.remove('hidden');
+        }
+
+        // Analyze button handler
+        analyzeBtn.addEventListener('click', async () => {
+            // Validation
+            if (!selectedFile) {
+                alert('Please upload a PDF file');
+                return;
+            }
+
+            if (jobDescription.value.trim().length < 20) {
+                alert('Please enter a job description (minimum 20 characters)');
+                return;
+            }
+
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('job_description', jobDescription.value.trim());
+
+            // Show loading
+            loadingOverlay.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_URL}/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Analysis failed');
+                }
+
+                const result = await response.json();
+                displayResults(result.data);
+
+            } catch (error) {
+                let errorMessage = error.message;
+                
+                // Friendly error messages
+                if (error.message.includes('503') || error.message.includes('loading')) {
+                    errorMessage = 'AI model is warming up. Please wait 20 seconds and try again.';
+                }
+                
+                alert(`Error: ${errorMessage}`);
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        });
+
+        function displayResults(data) {
+            // Match Score
+            document.getElementById('matchScore').textContent = data.match_percentage + '%';
+            
+            // Summary
+            document.getElementById('summary').textContent = data.summary;
+
+            // Missing Keywords
+            const keywordsContainer = document.getElementById('missingKeywords');
+            keywordsContainer.innerHTML = '';
+            
+            if (data.missing_keywords.length === 0) {
+                keywordsContainer.innerHTML = '<span class="text-green-600 font-semibold">✓ No major keywords missing!</span>';
+            } else {
+                data.missing_keywords.forEach(keyword => {
+                    const tag = document.createElement('span');
+                    tag.className = 'px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium';
+                    tag.textContent = keyword;
+                    keywordsContainer.appendChild(tag);
+                });
+            }
+
+            // Tips
+            const tipsList = document.getElementById('tipsList');
+            tipsList.innerHTML = '';
+            
+            data.tips.forEach(tip => {
+                const li = document.createElement('li');
+                li.className = 'flex items-start';
+                li.innerHTML = `
+                    <span class="text-blue-600 mr-2 mt-1">•</span>
+                    <span class="text-gray-700">${tip}</span>
+                `;
+                tipsList.appendChild(li);
+            });
+
+            // Show results
+            resultsSection.classList.remove('hidden');
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
